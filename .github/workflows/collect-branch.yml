@@ -71,8 +71,15 @@ jobs:
         run: |
           tar -cv -Ipigz --remove-files \
             -f ${{ vars.COLLECTOR }}-binaries-${{ needs.Date.outputs.Date }}.tgz \
-            binaries helmcharts
+            binaries helmcharts \
+            | tee ${{ vars.COLLECTOR }}-binaries--${{ needs.Setup.outputs.Date }}.tgz.txt
           ls -Alh ${{ vars.COLLECTOR }}-binaries-${{ needs.Date.outputs.Date }}.tgz
+
+      - name: Upload TARchive ToC
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ vars.COLLECTOR }}-binaries-${{ needs.Date.outputs.Date }}.tgz.txt
+          path: ${{ vars.COLLECTOR }}-binaries-${{ needs.Date.outputs.Date }}.tgz.txt
 
       - name: Upload TARchive
         uses: actions/upload-artifact@v4
