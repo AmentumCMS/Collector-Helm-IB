@@ -38,10 +38,20 @@ jobs:
         run: |
           mkdir binaries
           echo -e "\nWorking with github repo helm/helm\n"
-          echo -e "Listing last 3 releases"
-          gh release list -R helm/helm | head -n3
+          echo -e "Listing last release"
+          HELMREL=$(gh release list -R helm/helm | head -n1)
+          echo $HELREL
+          HELMVER=$(echo $HELMREL | grep -oP 'v3\.\d+\.\d+' | head -1)
+          echo $HELMVER
           echo -e "\nDownloading Latest to binaries"
-          gh release download -p "*" -D binaries -R helm/helm
+          gh release download -p "*windows*amd64*" -p "*linux*amd*" -p "*linux*386*" -D binaries -R helm/helm
+          cd binaries
+          curl -OsSw "Windows amd64\n" \
+            https://get.helm.sh/helm-$HELMVER-windows-amd64.zip
+          curl -OsSw "Linux 386\n" \
+            https://get.helm.sh/helm-$HELMVER-linux-386.tar.gz
+          curl -OsSw "Linux amd64\n" \
+            https://get.helm.sh/helm-$HELMVER-linux-amd64.tar.gz
 
       - name: Pull helm charts
         run: |
@@ -88,7 +98,7 @@ jobs:
 
       - name: Run Skopeo Sync
         run: |
-          skopeo sync \
+          skopeo sync --scoped \
               --src yaml --dest dir ${{ vars.COLLECTOR }}.yml ${{ vars.COLLECTOR }}
 
       - name: Directory Contents
