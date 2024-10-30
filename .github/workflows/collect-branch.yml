@@ -32,6 +32,15 @@ jobs:
           sudo apt-get install -y pigz
           curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
 
+      - name: Download Binaries
+        run: |
+          mkdir binaries
+          echo -e "\nWorking with github repo helm/helm\n"
+          echo -e "Listing last 3 releases"
+          gh release list -R helm/helm | head -n3
+          echo -e "\nDownloading Latest to binaries"
+          gh release download -p "*" -D binaries -R helm/helm
+
       - name: Pull helm charts
         run: |
           mkdir helmcharts
@@ -49,14 +58,15 @@ jobs:
       - name: TARchive Helm Output
         run: |
           tar -cv -Ipigz --remove-files \
-            -f ${{ vars.COLLECTOR }}-charts-${{ needs.Date.outputs.Date }}.tgz ${{ vars.COLLECTOR }}
-          ls -Alh ${{ vars.COLLECTOR }}-charts-${{ needs.Date.outputs.Date }}.tgz
+            -f ${{ vars.COLLECTOR }}-binaries-${{ needs.Date.outputs.Date }}.tgz \
+            binaries helmcharts
+          ls -Alh ${{ vars.COLLECTOR }}-binaries-${{ needs.Date.outputs.Date }}.tgz
 
       - name: Upload TARchive
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ vars.COLLECTOR }}-charts-${{ needs.Date.outputs.Date }}.tgz
-          path: ${{ vars.COLLECTOR }}-charts-${{ needs.Date.outputs.Date }}.tgz
+          name: ${{ vars.COLLECTOR }}-binaries-${{ needs.Date.outputs.Date }}.tgz
+          path: ${{ vars.COLLECTOR }}-binaries-${{ needs.Date.outputs.Date }}.tgz
 
   Skopeo:
     needs: [Date]
