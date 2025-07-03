@@ -75,20 +75,16 @@ jobs:
           tar -cv -Ipigz --remove-files \
             -f ${{ vars.COLLECTOR }}-binaries-${{ needs.Date.outputs.Date }}.tgz \
             binaries helmcharts \
-            | tee ${{ vars.COLLECTOR }}-binaries--${{ needs.Setup.outputs.Date }}.tgz.txt
-          ls -Alht ${{ vars.COLLECTOR }}-binaries-${{ needs.Date.outputs.Date }}.tgz
-
-      - name: Upload TARchive ToC
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ vars.COLLECTOR }}-binaries-${{ needs.Date.outputs.Date }}.tgz.txt
-          path: ${{ vars.COLLECTOR }}-binaries-${{ needs.Date.outputs.Date }}.tgz.txt
+            | tee ${{ vars.COLLECTOR }}-binaries-${{ needs.Setup.outputs.Date }}.tgz.txt
+          sha256sum -b ${{ vars.COLLECTOR }}-binaries-${{ needs.Date.outputs.Date }}.tgz | tee \
+            ${{ vars.COLLECTOR }}-binaries-${{ needs.Date.outputs.Date }}.tgz.sha
+          ls -Alht ${{ vars.COLLECTOR }}-binaries-${{ needs.Date.outputs.Date }}.tgz*
 
       - name: Upload TARchive
         uses: actions/upload-artifact@v4
         with:
           name: ${{ vars.COLLECTOR }}-binaries-${{ needs.Date.outputs.Date }}.tgz
-          path: ${{ vars.COLLECTOR }}-binaries-${{ needs.Date.outputs.Date }}.tgz
+          path: ${{ vars.COLLECTOR }}-binaries-${{ needs.Date.outputs.Date }}.tgz*
 
   Docker:
     needs: [Date]
