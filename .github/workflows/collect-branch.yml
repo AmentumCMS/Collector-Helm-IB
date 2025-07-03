@@ -1,4 +1,4 @@
-name: COLLECTOR IB Collector (Branch)
+name: Helm IB Collector (Branch)
 run-name: ${{ github.actor }} is Collecting a Branch! 🚀
 on:
   push:
@@ -209,7 +209,7 @@ jobs:
         run: |
           sha256sum -b ${{ vars.COLLECTOR }}-code-${{ needs.Date.outputs.Date }}.tgz | tee \
             ${{ vars.COLLECTOR }}-code-${{ needs.Date.outputs.Date }}.tgz.sha
-            
+
       - name: Upload Tarchive, ToC, and hash
         uses: actions/upload-artifact@v4
         with:
