@@ -118,12 +118,13 @@ jobs:
           sha256sum -b ${{ vars.COLLECTOR }}-helmplugged-${{ needs.Date.outputs.Date }}.tgz | tee \
             ${{ vars.COLLECTOR }}-helmplugged-${{ needs.Date.outputs.Date }}.tgz.sha
 
-      - name: Directory Contents
+      - name: List TARchives Contents
         run: |
-          echo "Directory Contents"
-          ls -lAhS *
+          echo " Contents"
+          ls -lAhS *.tgz*
           echo -e "\nDirectory Size"
-          du -hd1 
+          du -h *.tgz*
+
       - name: Upload Image TARchive
         uses: actions/upload-artifact@v4
         with:
