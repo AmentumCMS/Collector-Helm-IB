@@ -1,0 +1,30 @@
+[submodule "plugins/helm-push"]
+	path = plugins/helm-push
+	url = https://github.com/chartmuseum/helm-push
+[submodule "plugins/helm-images"]
+	path = plugins/helm-images
+	url = https://github.com/nikhilsbhat/helm-images
+[submodule "plugins/helm-diff"]
+	path = plugins/helm-diff
+	url = https://github.com/databus23/helm-diff
+[submodule "plugins/helm-nexus-push"]
+	path = plugins/helm-nexus-push
+	url = https://github.com/sonatype-nexus-community/helm-nexus-push
+[submodule "plugins/helm-release"]
+	path = plugins/helm-release
+	url = https://github.com/sstarcher/helm-release
+[submodule "plugins/helm-sigstore"]
+	path = plugins/helm-sigstore
+	url = https://github.com/sigstore/helm-sigstore
+[submodule "plugins/helm-drift"]
+	path = plugins/helm-drift
+	url = https://github.com/nikhilsbhat/helm-drift
+[submodule "plugins/helm-tooling"]
+	path = plugins/helm-tooling
+	url = https://github.com/vmware-labs/distribution-tooling-for-helm
+[submodule "plugins/helm-set-status"]
+	path = plugins/helm-set-status
+	url = https://github.com/k3s-io/helm-set-status
+[submodule "plugins/helm-semantic-version"]
+	path = plugins/helm-semantic-version
+	url = https://github.com/nflaig/semantic-release-helm
