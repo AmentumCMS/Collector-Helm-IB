@@ -171,7 +171,6 @@ jobs:
           tar -cv -Ipigz --remove-files \
             -f ${{ vars.COLLECTOR }}-skopeo-${{ needs.Date.outputs.Date }}.tgz ${{ vars.COLLECTOR }} \
           | tee ${{ vars.COLLECTOR }}-skopeo-${{ needs.Date.outputs.Date }}.tgz.txt
-          ls -1Ssh ${{ vars.COLLECTOR }}-skopeo-${{ needs.Date.outputs.Date }}.tgz
 
       - name: Generate TARchive Hash
         run: |
@@ -180,7 +179,7 @@ jobs:
 
       - name: List TARchives Contents
         run: |
-          echo -e "\nTARchive, ToC, & Hash created!\n$(ls -1Ssh *.tgz*)\n"
+          echo -e "\nTARchive, ToC, & Hash created!\n$(du -chs *.tgz*)\n"
 
       - name: Upload TARchive
         uses: actions/upload-artifact@v4
@@ -243,7 +242,7 @@ jobs:
 
       - name: List TARchives Contents
         run: |
-          echo -e "\nTARchive, ToC, & Hash created!\n$(ls -1Ssh *.tgz*)\n"
+          echo -e "\nTARchive, ToC, & Hash created!\n$(du -chs *.tgz*)\n"
 
       - name: Upload Tarchive, ToC, and hash
         uses: actions/upload-artifact@v4

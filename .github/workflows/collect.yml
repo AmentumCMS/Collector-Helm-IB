@@ -173,7 +173,6 @@ jobs:
           tar -cv -Ipigz --remove-files \
             -f ${{ vars.COLLECTOR }}-skopeo-${{ needs.Date.outputs.Date }}.tgz ${{ vars.COLLECTOR }} \
           | tee ${{ vars.COLLECTOR }}-skopeo-${{ needs.Date.outputs.Date }}.tgz.txt
-          ls -1Ssh ${{ vars.COLLECTOR }}-skopeo-${{ needs.Date.outputs.Date }}.tgz
 
       - name: Generate TARchive Hash
         run: |
