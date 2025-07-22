@@ -88,7 +88,7 @@ jobs:
 
       - name: List directory Contents
         run: |
-          echo -e "Contents:\n$(ls -1Ssh *.tgz*)"
+          echo -e "Contents:\n$(du -chs *.tgz*)"
 
       - name: Upload TARchive
         uses: actions/upload-artifact@v4
@@ -129,10 +129,9 @@ jobs:
           sha256sum -b ${{ vars.COLLECTOR }}-helmplugged-${{ needs.Date.outputs.Date }}.tgz | tee \
             ${{ vars.COLLECTOR }}-helmplugged-${{ needs.Date.outputs.Date }}.tgz.sha
 
-      - name: List TARchives Contents
+      - name: List Directory Contents
         run: |
-          echo -e "Contents:\n$(ls -1Ssh *.tgz*)"
-          echo -e "\nDirectory Size:\n$(du -chs *.tgz*)\n"
+          echo -e "\nContents:\n$(du -chs *.tgz*)\n"
 
       - name: Upload Image TARchive
         uses: actions/upload-artifact@v4
@@ -183,7 +182,7 @@ jobs:
 
       - name: List TARchives Contents
         run: |
-          echo -e "\nTARchive, ToC, & Hash created!\n$(ls -1Ssh *.tgz*)\n"
+          echo -e "\nTARchive, ToC, & Hash created!\n$(du -chs *.tgz*)\n"
 
       - name: Upload TARchive
         uses: actions/upload-artifact@v4
@@ -228,7 +227,7 @@ jobs:
 
       - name: List TARchives Contents
         run: |
-          echo -e "\nTARchive, ToC, & Hash created!\n$(ls -1Ssh *.tgz*)\n"
+          echo -e "\nTARchive, ToC, & Hash created!\n$(du -chs *.tgz*)\n"
 
       - name: Upload Tarchive, ToC, and hash
         uses: actions/upload-artifact@v4
