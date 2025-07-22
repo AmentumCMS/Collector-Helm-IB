@@ -192,7 +192,14 @@ jobs:
 
       - name: Update Submodules if needed
         shell: bash
-        run: git submodule update --init --recursive --remote
+        run: |
+          git submodule update --init --recursive --remote
+          git commit -am "Update Submodules"
+          if [ $? -eq 1 ];then
+            echo "No push required"
+          else
+            git push
+          fi
 
       - name: Bundle Repo1 code base for ${{ vars.COLLECTOR }}
         run: |
