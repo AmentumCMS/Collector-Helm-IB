@@ -68,7 +68,7 @@ jobs:
       
       - name: Directory Contents
         run: |
-          echo -e "Directory Contents:\n$(ls -1AhS *)\n"
+          echo -e "Directory Contents:\n$(ls -1Ssh *)\n"
           echo -e "Directory Size:\n$(du -hd1)\n"
 
       - name: TARchive Helm Output
@@ -76,17 +76,17 @@ jobs:
           tar -cv -Ipigz --remove-files \
             -f ${{ vars.COLLECTOR }}-binaries-${{ needs.Date.outputs.Date }}.tgz \
             binaries helmcharts plugins \
-            | tee ${{ vars.COLLECTOR }}-binaries-${{ needs.Setup.outputs.Date }}.tgz.txt
+            | tee ${{ vars.COLLECTOR }}-binaries-${{ needs.Date.outputs.Date }}.tgz.txt
 
       - name: Generate TARchive Hash
         run: |
           echo -e "\nGenerating TARchive Hash"
-          sha256sum -b ${{ vars.COLLECTOR }}-binaries-${{ needs.Date.outputs.Date }}.tgz | tee \
-            ${{ vars.COLLECTOR }}-binaries-${{ needs.Date.outputs.Date }}.tgz.sha
+          sha256sum -b ${{ vars.COLLECTOR }}-binaries-${{ needs.Date.outputs.Date }}.tgz \
+          | tee ${{ vars.COLLECTOR }}-binaries-${{ needs.Date.outputs.Date }}.tgz.sha
 
       - name: List directory Contents
         run: |
-          echo -e "Contents:\n$(ls -1AhS *.tgz*)"
+          echo -e "Contents:\n$(ls -1Ssh *.tgz*)"
 
       - name: Upload TARchive
         uses: actions/upload-artifact@v4
@@ -129,8 +129,8 @@ jobs:
 
       - name: List TARchives Contents
         run: |
-          echo -e "Contents:\n$(ls -1AhS *.tgz*)"
-          echo -e "\nDirectory Size:\n$(du -h *.tgz*)\n"
+          echo -e "Contents:\n$(ls -1Ssh *.tgz*)"
+          echo -e "\nDirectory Size:\n$(du -chs *.tgz*)\n"
 
       - name: Upload Image TARchive
         uses: actions/upload-artifact@v4
@@ -165,21 +165,31 @@ jobs:
       - name: Directory Contents
         run: |
           echo "Directory Contents"
-          ls -lAhS *
+          ls -1Ssh *
           echo -e "\nDirectory Size"
-          du -hd1 
+          du -chd1 
 
       - name: TARchive Skopeo Output
         run: |
           tar -cv -Ipigz --remove-files \
-            -f ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.tgz ${{ vars.COLLECTOR }}
-          ls -Alht ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.tgz
+            -f ${{ vars.COLLECTOR }}-skopeo-${{ needs.Date.outputs.Date }}.tgz ${{ vars.COLLECTOR }} \
+          | tee ${{ vars.COLLECTOR }}-skopeo-${{ needs.Date.outputs.Date }}.tgz.txt
+          ls -Alht ${{ vars.COLLECTOR }}-skopeo-${{ needs.Date.outputs.Date }}.tgz
+
+      - name: Generate TARchive Hash
+        run: |
+          sha256sum -b ${{ vars.COLLECTOR }}-skopeo-${{ needs.Date.outputs.Date }}.tgz \
+          | tee ${{ vars.COLLECTOR }}-skopeo-${{ needs.Date.outputs.Date }}.tgz.sha
+
+      - name: List TARchives Contents
+        run: |
+          echo -e "\nTARchive, ToC, & Hash created!\n$(ls -1Ssh *.tgz*)\n"
 
       - name: Upload TARchive
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.tgz
-          path: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.tgz
+          name: ${{ vars.COLLECTOR }}-skopeo-${{ needs.Date.outputs.Date }}.tgz
+          path: ${{ vars.COLLECTOR }}-skopeo-${{ needs.Date.outputs.Date }}.tgz*
 
   Code:
     needs: [Date]
