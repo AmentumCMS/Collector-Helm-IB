@@ -77,7 +77,7 @@ jobs:
         run: |
           tar -cv -Ipigz --remove-files \
             -f ${{ vars.COLLECTOR }}-binaries-${{ needs.Date.outputs.Date }}.tgz \
-            binaries helmcharts \
+            binaries helmcharts plugins \
             | tee ${{ vars.COLLECTOR }}-binaries-${{ needs.Setup.outputs.Date }}.tgz.txt
           sha256sum -b ${{ vars.COLLECTOR }}-binaries-${{ needs.Date.outputs.Date }}.tgz | tee \
             ${{ vars.COLLECTOR }}-binaries-${{ needs.Date.outputs.Date }}.tgz.sha
