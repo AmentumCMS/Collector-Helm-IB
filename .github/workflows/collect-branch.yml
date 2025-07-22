@@ -150,7 +150,7 @@ jobs:
       - name: Install Skopeo
         run: |
           sudo apt-get update -y
-          sudo apt-get install -y skopeo pigz
+          sudo apt-get install -y skopeo pigz tree
 
       - name: DSO Login
         run: |
@@ -163,7 +163,8 @@ jobs:
 
       - name: Directory Contents
         run: |
-          echo -e "Directory Contents:\n$(ls -1Ssh *)\n"
+          echo -e "Directory Contents:\n$(ls -1h *)\n"
+          echo -e "Directory Tree:\n$(tree)\n"
           echo -e "\nDirectory Size:\n$(du -chd1)\n"
 
       - name: TARchive Skopeo Output
@@ -240,7 +241,7 @@ jobs:
           sha256sum -b ${{ vars.COLLECTOR }}-code-${{ needs.Date.outputs.Date }}.tgz | tee \
             ${{ vars.COLLECTOR }}-code-${{ needs.Date.outputs.Date }}.tgz.sha
 
-      - name: List TARchives Contents
+      - name: List Directory Contents
         run: |
           echo -e "\nTARchive, ToC, & Hash created!\n$(du -chs *.tgz*)\n"
 
