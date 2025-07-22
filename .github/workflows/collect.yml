@@ -79,9 +79,16 @@ jobs:
             -f ${{ vars.COLLECTOR }}-binaries-${{ needs.Date.outputs.Date }}.tgz \
             binaries helmcharts plugins \
             | tee ${{ vars.COLLECTOR }}-binaries-${{ needs.Setup.outputs.Date }}.tgz.txt
+
+      - name: Generate TARchive Hash
+        run: |
+          echo -e "\nGenerating TARchive Hash"
           sha256sum -b ${{ vars.COLLECTOR }}-binaries-${{ needs.Date.outputs.Date }}.tgz | tee \
             ${{ vars.COLLECTOR }}-binaries-${{ needs.Date.outputs.Date }}.tgz.sha
-          ls -Alht ${{ vars.COLLECTOR }}-binaries-${{ needs.Date.outputs.Date }}.tgz*
+
+      - name: List directory Contents
+        run: |
+          echo -e "Contents:\n$(ls -1AhS *.tgz*)"
 
       - name: Upload TARchive
         uses: actions/upload-artifact@v4
