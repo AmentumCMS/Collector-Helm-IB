@@ -3,6 +3,7 @@ ENV HELM_PLUGINS="/usr/share/helm/plugins"
 COPY ./plugins /usr/share/helm/plugins
 RUN echo -e "\nListing Helm Plugin Dir:" &&\
     ls -1 /usr/share/helm/plugins &&\
+    echo -e "\nSize of Helm Plugins:" &&\
     du -chd1 /usr/share/helm/plugins &&\
     echo -e "\nListing Helm Plugins:" &&\
     helm plugin list &&\

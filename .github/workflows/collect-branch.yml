@@ -68,10 +68,8 @@ jobs:
       
       - name: Directory Contents
         run: |
-          echo "Directory Contents"
-          ls -lAhS *
-          echo -e "\nDirectory Size"
-          du -hd1 
+          echo -e "Directory Contents:\n$(ls -1AhS *)\n"
+          echo -e "Directory Size:\n$(du -hd1)\n"
 
       - name: TARchive Helm Output
         run: |
@@ -124,10 +122,8 @@ jobs:
 
       - name: List TARchives Contents
         run: |
-          echo " Contents"
-          ls -lAhS *.tgz*
-          echo -e "\nDirectory Size"
-          du -h *.tgz*
+          echo -e "Contents:\n$(ls -1AhS *.tgz*)"
+          echo -e "\nDirectory Size:\n$(du -h *.tgz*)\n"
 
       - name: Upload Image TARchive
         uses: actions/upload-artifact@v4
@@ -225,11 +221,13 @@ jobs:
           tar -cvzC .. \
             -f ${{ vars.COLLECTOR }}-code-${{ needs.Date.outputs.Date }}.tgz $(basename ${{ github.WORKSPACE }}) \
             | tee ${{ vars.COLLECTOR }}-code-${{ needs.Date.outputs.Date }}.tgz.txt
+          echo -e "\nTARchive and ToC created!\n$(ls -1Ssh *tgz*)\n"
 
       - name: Generate TARchive Hash
         run: |
           sha256sum -b ${{ vars.COLLECTOR }}-code-${{ needs.Date.outputs.Date }}.tgz | tee \
             ${{ vars.COLLECTOR }}-code-${{ needs.Date.outputs.Date }}.tgz.sha
+          echo -e "\nTARchive Hash created!\n$(ls -1Ssh *tgz*)\n"
 
       - name: Upload Tarchive, ToC, and hash
         uses: actions/upload-artifact@v4
