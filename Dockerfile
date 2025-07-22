@@ -2,7 +2,8 @@ FROM alpine/helm:3
 ENV HELM_PLUGINS="/usr/share/helm/plugins"
 COPY ./plugins /usr/share/helm/plugins
 RUN echo -e "\nListing Helm Plugin Dir:" &&\
-    ls -1Ssh /usr/share/helm/plugins &&\
+    ls -1 /usr/share/helm/plugins &&\
+    du -chd1 /usr/share/helm/plugins &&\
     echo -e "\nListing Helm Plugins:" &&\
     helm plugin list &&\
     echo -e "\nHelm Version:\n$(helm version)\n"
