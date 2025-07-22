@@ -29,6 +29,9 @@ jobs:
     steps:
       - name: Check out repository code
         uses: actions/checkout@v4
+        with:
+          submodules: true
+          lfs: true
 
       - name: Install helm
         run: |
@@ -67,20 +70,25 @@ jobs:
       
       - name: Directory Contents
         run: |
-          echo "Directory Contents"
-          ls -lAhS *
-          echo -e "\nDirectory Size"
-          du -hd1 
+          echo -e "Directory Contents:\n$(ls -1Ssh *)\n"
+          echo -e "Directory Size:\n$(du -hd1)\n"
 
       - name: TARchive Helm Output
         run: |
           tar -cv -Ipigz --remove-files \
             -f ${{ vars.COLLECTOR }}-binaries-${{ needs.Date.outputs.Date }}.tgz \
-            binaries helmcharts \
-            | tee ${{ vars.COLLECTOR }}-binaries-${{ needs.Setup.outputs.Date }}.tgz.txt
-          sha256sum -b ${{ vars.COLLECTOR }}-binaries-${{ needs.Date.outputs.Date }}.tgz | tee \
-            ${{ vars.COLLECTOR }}-binaries-${{ needs.Date.outputs.Date }}.tgz.sha
-          ls -Alht ${{ vars.COLLECTOR }}-binaries-${{ needs.Date.outputs.Date }}.tgz*
+            binaries helmcharts plugins \
+            | tee ${{ vars.COLLECTOR }}-binaries-${{ needs.Date.outputs.Date }}.tgz.txt
+
+      - name: Generate TARchive Hash
+        run: |
+          echo -e "\nGenerating TARchive Hash"
+          sha256sum -b ${{ vars.COLLECTOR }}-binaries-${{ needs.Date.outputs.Date }}.tgz \
+          | tee ${{ vars.COLLECTOR }}-binaries-${{ needs.Date.outputs.Date }}.tgz.sha
+
+      - name: List directory Contents
+        run: |
+          echo -e "Contents:\n$(ls -1Ssh *.tgz*)"
 
       - name: Upload TARchive
         uses: actions/upload-artifact@v4
@@ -98,6 +106,9 @@ jobs:
           sudo apt-get install -y pigz
       - name: Check out repository code
         uses: actions/checkout@v4
+        with:
+          submodules: true
+          lfs: true
 
       - name: Login to DockerHub
         uses: docker/login-action@v3 
@@ -120,10 +131,8 @@ jobs:
 
       - name: List TARchives Contents
         run: |
-          echo " Contents"
-          ls -lAhS *.tgz*
-          echo -e "\nDirectory Size"
-          du -h *.tgz*
+          echo -e "Contents:\n$(ls -1Ssh *.tgz*)"
+          echo -e "\nDirectory Size:\n$(du -chs *.tgz*)\n"
 
       - name: Upload Image TARchive
         uses: actions/upload-artifact@v4
@@ -157,35 +166,48 @@ jobs:
 
       - name: Directory Contents
         run: |
-          echo "Directory Contents"
-          ls -lAhS *
-          echo -e "\nDirectory Size"
-          du -hd1 
+          echo -e "Directory Contents:\n$(ls -1Ssh *)\n"
+          echo -e "\nDirectory Size:\n$(du -chd1)\n"
 
       - name: TARchive Skopeo Output
         run: |
           tar -cv -Ipigz --remove-files \
-            -f ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.tgz ${{ vars.COLLECTOR }}
-          ls -Alht ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.tgz
+            -f ${{ vars.COLLECTOR }}-skopeo-${{ needs.Date.outputs.Date }}.tgz ${{ vars.COLLECTOR }} \
+          | tee ${{ vars.COLLECTOR }}-skopeo-${{ needs.Date.outputs.Date }}.tgz.txt
+          ls -1Ssh ${{ vars.COLLECTOR }}-skopeo-${{ needs.Date.outputs.Date }}.tgz
+
+      - name: Generate TARchive Hash
+        run: |
+          sha256sum -b ${{ vars.COLLECTOR }}-skopeo-${{ needs.Date.outputs.Date }}.tgz \
+          | tee ${{ vars.COLLECTOR }}-skopeo-${{ needs.Date.outputs.Date }}.tgz.sha
+
+      - name: List TARchives Contents
+        run: |
+          echo -e "\nTARchive, ToC, & Hash created!\n$(ls -1Ssh *.tgz*)\n"
 
       - name: Upload TARchive
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.tgz
-          path: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.tgz
+          name: ${{ vars.COLLECTOR }}-skopeo-${{ needs.Date.outputs.Date }}.tgz
+          path: ${{ vars.COLLECTOR }}-skopeo-${{ needs.Date.outputs.Date }}.tgz*
 
   Code:
     needs: [Date]
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
     steps:
       - name: Check out repository code
         uses: actions/checkout@v4
-
+        with:
+          submodules: true
+          lfs: true
 
       - name: Bundle Repo1 code base for ${{ vars.COLLECTOR }}
         run: |
           git bundle create --progress ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.bundle --all
-          ls -Alht *
+          ls -1Ssh *
 
       - name: Upload bundle
         uses: actions/upload-artifact@v4
@@ -195,7 +217,7 @@ jobs:
 
       - name: TARchive code base for ${{ vars.COLLECTOR }}
         run: |
-          tar -cvC .. \
+          tar -cvzC .. \
             -f ${{ vars.COLLECTOR }}-code-${{ needs.Date.outputs.Date }}.tgz $(basename ${{ github.WORKSPACE }}) \
             | tee ${{ vars.COLLECTOR }}-code-${{ needs.Date.outputs.Date }}.tgz.txt
 
@@ -203,6 +225,10 @@ jobs:
         run: |
           sha256sum -b ${{ vars.COLLECTOR }}-code-${{ needs.Date.outputs.Date }}.tgz | tee \
             ${{ vars.COLLECTOR }}-code-${{ needs.Date.outputs.Date }}.tgz.sha
+
+      - name: List TARchives Contents
+        run: |
+          echo -e "\nTARchive, ToC, & Hash created!\n$(ls -1Ssh *.tgz*)\n"
 
       - name: Upload Tarchive, ToC, and hash
         uses: actions/upload-artifact@v4
@@ -232,7 +258,7 @@ jobs:
           merge-multiple: true
 
       - name: Show Artifacts
-        run: ls -Alht ${{ vars.COLLECTOR }}-*.*
+        run: ls -1Ssh ${{ vars.COLLECTOR }}-*.*
 
       - name: Generate Artifact Hash File
         run: |
@@ -263,7 +289,7 @@ jobs:
           cat ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.iso.sha
 
       - name: Show ISO & Hash
-        run: ls -Alht *.iso*
+        run: ls -1Ssh *.iso*
 
       - name: Upload ISO
         uses: actions/upload-artifact@v4
@@ -294,7 +320,7 @@ jobs:
           merge-multiple: true
 
       - name: Show Artifacts
-        run: ls -Alht ${{ vars.COLLECTOR }}-*.*
+        run: ls -1Ssh ${{ vars.COLLECTOR }}-*.*
 
       - name: Set up git
         run: |
@@ -335,7 +361,7 @@ jobs:
           merge-multiple: true
 
       - name: Show Artifacts
-        run: ls -Alht ${{ vars.COLLECTOR }}-*.*
+        run: ls -1Ssh ${{ vars.COLLECTOR }}-*.*
 
       - name: Send Files to Sharepoint
         uses: amentumservices/sharepoint-file-upload-action@pappasjfed-patch-1
