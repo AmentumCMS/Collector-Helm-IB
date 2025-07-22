@@ -166,17 +166,15 @@ jobs:
 
       - name: Directory Contents
         run: |
-          echo "Directory Contents"
-          ls -1Ssh *
-          echo -e "\nDirectory Size"
-          du -chd1 
+          echo -e "Directory Contents:\n$(ls -1Ssh *)\n"
+          echo -e "\nDirectory Size:\n$(du -chd1)\n"
 
       - name: TARchive Skopeo Output
         run: |
           tar -cv -Ipigz --remove-files \
             -f ${{ vars.COLLECTOR }}-skopeo-${{ needs.Date.outputs.Date }}.tgz ${{ vars.COLLECTOR }} \
           | tee ${{ vars.COLLECTOR }}-skopeo-${{ needs.Date.outputs.Date }}.tgz.txt
-          ls -Alht ${{ vars.COLLECTOR }}-skopeo-${{ needs.Date.outputs.Date }}.tgz
+          ls -1Ssh ${{ vars.COLLECTOR }}-skopeo-${{ needs.Date.outputs.Date }}.tgz
 
       - name: Generate TARchive Hash
         run: |
@@ -209,7 +207,7 @@ jobs:
       - name: Bundle Repo1 code base for ${{ vars.COLLECTOR }}
         run: |
           git bundle create --progress ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.bundle --all
-          ls -Alht *
+          ls -1Ssh *
 
       - name: Upload bundle
         uses: actions/upload-artifact@v4
@@ -260,7 +258,7 @@ jobs:
           merge-multiple: true
 
       - name: Show Artifacts
-        run: ls -Alht ${{ vars.COLLECTOR }}-*.*
+        run: ls -1Ssh ${{ vars.COLLECTOR }}-*.*
 
       - name: Generate Artifact Hash File
         run: |
@@ -291,7 +289,7 @@ jobs:
           cat ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.iso.sha
 
       - name: Show ISO & Hash
-        run: ls -Alht *.iso*
+        run: ls -1Ssh *.iso*
 
       - name: Upload ISO
         uses: actions/upload-artifact@v4
@@ -322,7 +320,7 @@ jobs:
           merge-multiple: true
 
       - name: Show Artifacts
-        run: ls -Alht ${{ vars.COLLECTOR }}-*.*
+        run: ls -1Ssh ${{ vars.COLLECTOR }}-*.*
 
       - name: Set up git
         run: |
@@ -363,7 +361,7 @@ jobs:
           merge-multiple: true
 
       - name: Show Artifacts
-        run: ls -Alht ${{ vars.COLLECTOR }}-*.*
+        run: ls -1Ssh ${{ vars.COLLECTOR }}-*.*
 
       - name: Send Files to Sharepoint
         uses: amentumservices/sharepoint-file-upload-action@pappasjfed-patch-1
