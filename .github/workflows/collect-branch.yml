@@ -275,7 +275,7 @@ jobs:
       - name: Download skopeo artifact
         uses: actions/download-artifact@v8
         with:
-          name: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.tgz
+          name: ${{ vars.COLLECTOR }}-skopeo-${{ needs.Date.outputs.Date }}.tgz
           path: scan-input
 
       - name: Show downloaded files
