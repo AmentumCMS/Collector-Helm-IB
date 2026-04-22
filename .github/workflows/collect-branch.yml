@@ -10,16 +10,13 @@ jobs:
   Date:
     runs-on: ubuntu-latest
     outputs:
-      Date: ${{ steps.date.outputs.date }}
+      Date: ${{ steps.date_step.outputs.DATE_VAL }}
     steps:
       - name: Get current date
-        id: DATE
+        id: date_step
         run: |
-          echo "Setting Date"
-          echo "DATE=$(date '+%Y%m%d-%H%M')" >> $GITHUB_OUTPUT
-          echo -e "\nWrote to file:\n$GITHUB_OUTPUT\n"
-          echo "Values:"
-          cat $GITHUB_OUTPUT
+          DVAL=$(date '+%Y%m%d-%H%M')
+          echo "DATE_VAL=$DVAL" >> $GITHUB_OUTPUT
 
   Helm:
     needs: [Date]
