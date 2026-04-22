@@ -5,7 +5,7 @@ on:
     branches:
       - main
   schedule:
-    - cron: "0 0 1 * *" # Update Monthly on the first
+    - cron: "0 0 1 * *" # Update on First of month at midnight UTC
   workflow_dispatch:
 
 jobs:
@@ -17,8 +17,10 @@ jobs:
       - name: Get current date
         id: DATE
         run: |
+          echo "Setting Date"
           echo "DATE=$(date '+%Y%m%d-%H%M')" >> $GITHUB_OUTPUT
-          echo -e "\n$GITHUB_OUTPUT\n"
+          echo -e "\nWrote to file:\n$GITHUB_OUTPUT\n"
+          echo "Values:"
           cat $GITHUB_OUTPUT
 
   Helm:
@@ -28,7 +30,7 @@ jobs:
       GH_TOKEN: ${{ github.token }}
     steps:
       - name: Check out repository code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           submodules: true
           lfs: true
@@ -91,7 +93,7 @@ jobs:
           echo -e "Contents:\n$(ls -1Ssh *.tgz*)"
 
       - name: Upload TARchive
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ vars.COLLECTOR }}-binaries-${{ needs.Date.outputs.Date }}.tgz
           path: ${{ vars.COLLECTOR }}-binaries-${{ needs.Date.outputs.Date }}.tgz*
@@ -105,13 +107,13 @@ jobs:
           sudo apt-get update -y
           sudo apt-get install -y pigz
       - name: Check out repository code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           submodules: true
           lfs: true
 
       - name: Login to DockerHub
-        uses: docker/login-action@v3 
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -135,7 +137,7 @@ jobs:
           echo -e "\nDirectory Size:\n$(du -chs *.tgz*)\n"
 
       - name: Upload Image TARchive
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ vars.COLLECTOR }}-helmplugged-${{ needs.Date.outputs.Date }}.tgz
           path: ${{ vars.COLLECTOR }}-helmplugged-${{ needs.Date.outputs.Date }}.tgz*
@@ -145,7 +147,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           submodules: true
           lfs: true
@@ -155,19 +157,23 @@ jobs:
           sudo apt-get update -y
           sudo apt-get install -y skopeo pigz
 
-      - name: DSO Login
+      - name: ${{ vars.REGISTRY }} Login
         run: |
-          skopeo login registry1.dso.mil -u ${{ secrets.REGISTRY_USER }} -p ${{ secrets.REGISTRY_TOKEN }}
+          skopeo login ${{ vars.REGISTRY }}  \
+            -u ${{ secrets.REGISTRY_USER }} \
+            -p ${{ secrets.REGISTRY_TOKEN }}
 
       - name: Run Skopeo Sync
         run: |
           skopeo sync --scoped \
-              --src yaml --dest dir ${{ vars.COLLECTOR }}.yml ${{ vars.COLLECTOR }}
+            --src yaml --dest dir \
+            ${{ vars.COLLECTOR }}.yml \
+            ${{ vars.COLLECTOR }}
 
       - name: Directory Contents
         run: |
-          echo -e "Directory Contents:\n$(ls -1Ssh *)\n"
-          echo -e "\nDirectory Size:\n$(du -chd1)\n"
+          echo -e "Directory Contents\n$(ls -lAhS *)"
+          echo -e "\n\nDirectory Size\n$(du -hd1)"
 
       - name: TARchive Skopeo Output
         run: |
@@ -176,7 +182,7 @@ jobs:
           | tee ${{ vars.COLLECTOR }}-skopeo-${{ needs.Date.outputs.Date }}.tgz.txt
           ls -1Ssh ${{ vars.COLLECTOR }}-skopeo-${{ needs.Date.outputs.Date }}.tgz
 
-      - name: Generate TARchive Hash
+      - name: Generate Hash
         run: |
           sha256sum -b ${{ vars.COLLECTOR }}-skopeo-${{ needs.Date.outputs.Date }}.tgz \
           | tee ${{ vars.COLLECTOR }}-skopeo-${{ needs.Date.outputs.Date }}.tgz.sha
@@ -185,11 +191,12 @@ jobs:
         run: |
           echo -e "\nTARchive, ToC, & Hash created!\n$(ls -1Ssh *.tgz*)\n"
 
-      - name: Upload TARchive
-        uses: actions/upload-artifact@v4
+      - name: Upload TARchive, ToC, and hash
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ vars.COLLECTOR }}-skopeo-${{ needs.Date.outputs.Date }}.tgz
           path: ${{ vars.COLLECTOR }}-skopeo-${{ needs.Date.outputs.Date }}.tgz*
+          if-no-files-found: error
 
   Code:
     needs: [Date]
@@ -199,25 +206,36 @@ jobs:
       pull-requests: write
     steps:
       - name: Check out repository code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           submodules: true
           lfs: true
 
+      - name: Setup Git
+        run: |
+          git config user.name "$(git log -n 1 --pretty=format:%an)"
+          git config user.email "$(git log -n 1 --pretty=format:%ae)"
+
       - name: Bundle Repo1 code base for ${{ vars.COLLECTOR }}
         run: |
           git bundle create --progress ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.bundle --all
-          ls -1Ssh *
+          echo -e "\nDirectory Listing\n$(ls -1sht *)"
 
-      - name: Upload bundle
-        uses: actions/upload-artifact@v4
+      - name: Generate Bundle Hash
+        run: |
+          sha256sum -b ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.bundle | tee \
+            ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.bundle.sha
+
+      - name: Upload bundle and hash
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.bundle
-          path: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.bundle
+          path: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.bundle*
+          if-no-files-found: error
 
       - name: TARchive code base for ${{ vars.COLLECTOR }}
         run: |
-          tar -cvzC .. \
+          tar -czvC .. \
             -f ${{ vars.COLLECTOR }}-code-${{ needs.Date.outputs.Date }}.tgz $(basename ${{ github.WORKSPACE }}) \
             | tee ${{ vars.COLLECTOR }}-code-${{ needs.Date.outputs.Date }}.tgz.txt
 
@@ -226,50 +244,355 @@ jobs:
           sha256sum -b ${{ vars.COLLECTOR }}-code-${{ needs.Date.outputs.Date }}.tgz | tee \
             ${{ vars.COLLECTOR }}-code-${{ needs.Date.outputs.Date }}.tgz.sha
 
-      - name: List TARchives Contents
-        run: |
-          echo -e "\nTARchive, ToC, & Hash created!\n$(ls -1Ssh *.tgz*)\n"
+      - name: Directory Listing
+        run: echo -e "\nDirectory Listing for $PWD\n$(ls -1Ssh)"
 
       - name: Upload Tarchive, ToC, and hash
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ vars.COLLECTOR }}-code-${{ needs.Date.outputs.Date }}.tgz
           path: ${{ vars.COLLECTOR }}-code-${{ needs.Date.outputs.Date }}.tgz*
           if-no-files-found: error
 
+  Scan:
+    name: Compliance scan (Trivy + Grype)
+    runs-on: ubuntu-latest
+    needs: [Date, Skopeo]
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Download skopeo artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.tgz
+          path: scan-input
+
+      - name: Show downloaded files
+        run: |
+          set -euo pipefail
+          echo "Downloaded files:"
+          find scan-input -maxdepth 2 -type f | sort
+
+      - name: Install dependencies
+        run: |
+          set -euo pipefail
+          sudo apt-get update -y
+          sudo apt-get install -y curl tar jq
+
+      - name: Install Trivy + Grype + skopeo
+        run: |
+          set -euo pipefail
+
+          sudo apt-get update -y
+          sudo apt-get install -y skopeo
+
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
+            | sudo sh -s -- -b /usr/local/bin
+
+          curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh \
+            | sudo sh -s -- -b /usr/local/bin
+
+      - name: Download report templates
+        run: |
+          set -euo pipefail
+          mkdir -p templates
+
+          curl -fsSL \
+            -o templates/trivy-html.tpl \
+            https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/html.tpl
+
+          curl -fsSL \
+            -o templates/grype-html.tmpl \
+            https://raw.githubusercontent.com/anchore/grype/refs/heads/main/templates/html.tmpl
+
+          ls -l templates
+
+      - name: Extract synced images
+        run: |
+          set -euo pipefail
+
+          mkdir -p extracted
+
+          tgz="$(find scan-input -type f -name '*.tgz' | head -n 1)"
+          [ -n "$tgz" ] || {
+            echo "ERROR: no skopeo tgz artifact found"
+            exit 1
+          }
+
+          echo "Extracting $tgz"
+          tar -xvf "$tgz" -C extracted
+
+          echo "Extracted contents:"
+          find extracted -maxdepth 4 -type f | sort | head -200
+
+      - name: Build local archive list from synced images
+        run: |
+          set -euo pipefail
+
+          mkdir -p \
+            scan-images \
+            scan-results/trivy \
+            scan-results/trivy-html \
+            scan-results/grype \
+            scan-results/grype-html
+
+          : > scan-images/archives.txt
+
+          find "extracted/${{ vars.COLLECTOR }}" -type f -name manifest.json | while read -r manifest; do
+            img_dir="$(dirname "$manifest")"
+            rel="${img_dir#extracted/${{ vars.COLLECTOR }}/}"
+            safe="$(printf '%s' "$rel" | sed -E 's/[^A-Za-z0-9._-]+/_/g')"
+            archive="scan-images/${safe}.tar"
+
+            echo "Preparing archive from dir transport: $img_dir"
+
+            skopeo copy \
+              "dir:${img_dir}" \
+              "docker-archive:${archive}:${safe}"
+
+            echo "${img_dir}|${archive}|${safe}" >> scan-images/archives.txt
+          done
+
+          test -s scan-images/archives.txt || {
+            echo "ERROR: no synced images found for scanning"
+            exit 1
+          }
+
+          echo "Archive list:"
+          cat scan-images/archives.txt
+          
+      - name: Trivy scan local synced images
+        run: |
+          set -euo pipefail
+          : > scan-results/trivy-report.txt
+
+          while IFS='|' read -r img_dir archive safe; do
+            [ -n "$archive" ] || continue
+            json_file="scan-results/trivy/${safe}.json"
+            html_file="scan-results/trivy-html/${safe}.html"
+
+            echo "=== Scanning ${img_dir} ===" | tee -a scan-results/trivy-report.txt
+
+            trivy image \
+              --quiet \
+              --scanners vuln \
+              --input "$archive" \
+              --format json \
+              -o "$json_file" \
+              >> scan-results/trivy-report.txt 2>&1 || true
+
+            if [ ! -s "$json_file" ]; then
+              echo "FATAL: JSON output missing for ${img_dir} (${json_file})" | tee -a scan-results/trivy-report.txt
+              continue
+            fi
+
+            trivy convert \
+              --format template \
+              --template "@templates/trivy-html.tpl" \
+              --output "$html_file" \
+              "$json_file" \
+              >> scan-results/trivy-report.txt 2>&1 || true
+
+            echo "=== ${img_dir} ===" >> scan-results/trivy-report.txt
+            trivy convert --format table "$json_file" >> scan-results/trivy-report.txt 2>&1 || true
+            echo >> scan-results/trivy-report.txt
+          done < scan-images/archives.txt
+
+          if grep -Eqi 'Fatal error|FATAL' scan-results/trivy-report.txt; then
+            echo "Compliance failed: Trivy fatal/conversion error."
+            exit 1
+          fi
+
+      - name: Grype scan local synced images
+        run: |
+          set -euo pipefail
+          : > scan-results/grype-report.txt
+
+          while IFS='|' read -r img_dir archive safe; do
+            [ -n "$archive" ] || continue
+
+            json_file="scan-results/grype/${safe}.json"
+            html_file="scan-results/grype-html/${safe}.html"
+
+            echo "=== Scanning ${img_dir} ===" | tee -a scan-results/grype-report.txt
+
+            grype "docker-archive:${archive}" -o json \
+              > "$json_file" \
+              2>> scan-results/grype-report.txt || true
+
+            grype "docker-archive:${archive}" \
+              -o template \
+              -t templates/grype-html.tmpl \
+              > "$html_file" \
+              2>> scan-results/grype-report.txt || true
+
+            if [ ! -s "$json_file" ]; then
+              echo "FATAL: JSON output missing for ${img_dir} (${json_file})" | tee -a scan-results/grype-report.txt
+            fi
+
+            if [ ! -s "$html_file" ]; then
+              echo "FATAL: HTML output missing for ${img_dir} (${html_file})" | tee -a scan-results/grype-report.txt
+            fi
+          done < scan-images/archives.txt
+
+      - name: Write vulnerability summary
+        run: |
+          set -euo pipefail
+
+          python3 <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          trivy_dir = Path("scan-results/trivy")
+          grype_dir = Path("scan-results/grype")
+          summary_path = Path(os.environ["GITHUB_STEP_SUMMARY"])
+
+          severities = ["CRITICAL", "HIGH", "MEDIUM", "LOW", "UNKNOWN"]
+
+          def empty_counts():
+              return {s: 0 for s in severities}
+
+          def safe_sev(value):
+              sev = str(value or "UNKNOWN").upper()
+              return sev if sev in severities else "UNKNOWN"
+
+          trivy_total_counts = empty_counts()
+          grype_total_counts = empty_counts()
+          trivy_rows = []
+          grype_rows = []
+
+          for jf in sorted(trivy_dir.glob("*.json")):
+              try:
+                  data = json.loads(jf.read_text())
+              except Exception:
+                  continue
+
+              counts = empty_counts()
+              for result in data.get("Results", []):
+                  for vuln in result.get("Vulnerabilities", []) or []:
+                      sev = safe_sev(vuln.get("Severity"))
+                      counts[sev] += 1
+                      trivy_total_counts[sev] += 1
+
+              total = sum(counts.values())
+              trivy_rows.append((jf.stem, counts, total))
+
+          for jf in sorted(grype_dir.glob("*.json")):
+              try:
+                  data = json.loads(jf.read_text())
+              except Exception:
+                  continue
+
+              counts = empty_counts()
+              for match in data.get("matches", []) or []:
+                  sev = safe_sev((match.get("vulnerability", {}) or {}).get("severity"))
+                  counts[sev] += 1
+                  grype_total_counts[sev] += 1
+
+              total = sum(counts.values())
+              grype_rows.append((jf.stem, counts, total))
+
+          def counts_table(title, totals):
+              lines = []
+              lines.append(f"## {title}")
+              lines.append("")
+              lines.append("| Severity | Count |")
+              lines.append("|---|---:|")
+              for sev in severities:
+                  lines.append(f"| {sev} | {totals[sev]} |")
+              lines.append(f"| **TOTAL** | **{sum(totals.values())}** |")
+              lines.append("")
+              return lines
+
+          def per_image_table(title, rows):
+              lines = []
+              lines.append(f"## {title}")
+              lines.append("")
+              lines.append("| Image | Critical | High | Medium | Low | Unknown | Total |")
+              lines.append("|---|---:|---:|---:|---:|---:|---:|")
+              for name, counts, total in rows:
+                  lines.append(
+                      f"| `{name}` | {counts['CRITICAL']} | {counts['HIGH']} | {counts['MEDIUM']} | {counts['LOW']} | {counts['UNKNOWN']} | {total} |"
+                  )
+              lines.append("")
+              return lines
+
+          lines = ["# Vulnerability Summary", ""]
+          lines += counts_table("Trivy Totals", trivy_total_counts)
+          lines += counts_table("Grype Totals", grype_total_counts)
+          lines += per_image_table("Trivy Per Image", trivy_rows)
+          lines += per_image_table("Grype Per Image", grype_rows)
+
+          with summary_path.open("a", encoding="utf-8") as f:
+              f.write("\n".join(lines) + "\n")
+          PY
+          
+      - name: Upload scan evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}-scan
+          path: |
+            scan-results/
+            scan-images/archives.txt
+            templates/
+          if-no-files-found: error
+
   MakeISO:
     runs-on: ubuntu-latest
-    needs: [Date, Code, Skopeo, Helm, Docker]
+    needs: [Date, Code, Skopeo, Scan, Helm, Docker]
     permissions:
       contents: write
       pull-requests: read
     steps:
+      - name: Check out repository code
+        uses: actions/checkout@v6
+
       - name: Install mkisofs
         run: |
           sudo apt-get update -y
-          sudo apt-get install -y mkisofs isomd5sum
-
-      - name: Check out repository code
-        uses: actions/checkout@v4
+          sudo apt-get install -y mkisofs isomd5sum wget
 
       - name: Download Artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           merge-multiple: true
+          path: ${{ vars.COLLECTOR }}
+
+      - name: Copy Markdowns to ${{ vars.COLLECTOR }}
+        run: cp -v *.md ${{ vars.COLLECTOR }}/
+
+      # Download Binaries if needed
+      # Binaries Downloaded
 
       - name: Show Artifacts
-        run: ls -1Ssh ${{ vars.COLLECTOR }}-*.*
+        run: ls -1sh ${{ vars.COLLECTOR }}
 
       - name: Generate Artifact Hash File
         run: |
-          sha256sum -b ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}* | tee \
+          cd ${{ vars.COLLECTOR }}
+          sha256sum -b *.* | tee \
             ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.sha
 
       - name: Upload Artifact Hash File
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.sha
-          path: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.sha
+          path: ${{ vars.COLLECTOR }}/${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.sha
+          if-no-files-found: error
+
+      - name: ISO Table of contents
+        run: |
+          tree ${{ vars.COLLECTOR }} \
+            | tee ${{ vars.COLLECTOR }}/${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.iso.txt
+
+      - name: Upload ISO ToC artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.iso.txt
+          path: ${{ vars.COLLECTOR }}/${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.iso.txt
+          if-no-files-found: error
 
       - name: Make ISO
         run: |
@@ -277,32 +600,32 @@ jobs:
             -V '${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}' \
             -A '${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}' \
             -o ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.iso \
-            ${{ vars.COLLECTOR }}-*.* *.md
+            ${{ vars.COLLECTOR }}
 
       - name: Implant MD5 sum into iso
         run: implantisomd5 ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.iso
 
       - name: Generate ISO Hash
         run: |
-          sha256sum -b ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.iso | tee \
-            ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.iso.sha
-          cat ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.iso.sha
+          sha256sum -b ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.iso \
+          | tee ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.iso.sha
 
       - name: Show ISO & Hash
-        run: ls -1Ssh *.iso*
+        run: ls -1sh *.iso*
 
-      - name: Upload ISO
-        uses: actions/upload-artifact@v4
+      - name: Upload ISO, ToC, and hash
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.iso
-          path: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.iso
+          path: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.iso*
           if-no-files-found: error
 
       - name: Upload ISO Hash
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.iso.sha
           path: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.iso.sha
+          if-no-files-found: error
 
   Release:
     runs-on: ubuntu-latest
@@ -312,16 +635,17 @@ jobs:
       pull-requests: read
     steps:
       - name: Check out repository code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Download Artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           merge-multiple: true
 
       - name: Show Artifacts
-        run: ls -1Ssh ${{ vars.COLLECTOR }}-*.*
+        run: ls -1sh ${{ vars.COLLECTOR }}-*.*
 
+      # Create Release
       - name: Set up git
         run: |
           git config user.name "$(git log -n 1 --pretty=format:%an)"
@@ -332,46 +656,16 @@ jobs:
         id: tag_create
         with:
           tag: ${{ needs.Date.outputs.Date }}
-          github_token: ${{secrets.GITHUB_TOKEN}}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
           tag_exists_error: false
           message: "Release for ${{ needs.Date.outputs.Date }} run"
 
       - name: Create Release
         id: create_release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           name: ${{ vars.COLLECTOR }} ${{ needs.Date.outputs.Date }}
           tag_name: ${{ needs.Date.outputs.Date }}
           make_latest: true
           files: |
-            ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.bundle
-            ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.tgz
-            ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.iso*
-
-  Sharepoint:
-    runs-on: ubuntu-latest
-    needs: [Date, MakeISO]
-    permissions:
-      contents: write
-      pull-requests: read
-    steps:
-      - name: Download Artifacts
-        uses: actions/download-artifact@v4
-        with:
-          merge-multiple: true
-
-      - name: Show Artifacts
-        run: ls -1Ssh ${{ vars.COLLECTOR }}-*.*
-
-      - name: Send Files to Sharepoint
-        uses: amentumcms/sharepoint-file-upload-action@pappasjfed-patch-1
-        with:
-          file_path: "${{ vars.COLLECTOR }}-*.*"
-          host_name: ${{ secrets.SHAREPOINT_HOST }}
-          site_name: ${{ secrets.SHAREPOINT_SITE }}
-          upload_path: '${{ secrets.SHAREPOINT_BASEPATH }}/${{ vars.COLLECTOR }}/${{ needs.Date.outputs.Date }}'
-          tenant_id: ${{ secrets.SHAREPOINT_TENANT_ID }}
-          client_id: ${{ secrets.SHAREPOINT_APP_ID }}
-          client_secret: ${{ secrets.SHAREPOINT_APP_SECRET }}
-          login_endpoint: 'login.microsoftonline.us'
-          graph_endpoint: 'graph.microsoft.us'
+            ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}*.*

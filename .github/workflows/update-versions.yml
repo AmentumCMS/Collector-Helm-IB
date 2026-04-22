@@ -1,0 +1,105 @@
+name: Update Container Versions
+on:
+  workflow_dispatch:
+
+jobs:
+  update-yaml:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v6
+        with:
+          ref: develop 
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y skopeo jq
+          sudo wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/bin/yq
+          sudo chmod +x /usr/bin/yq
+
+      - name: Update YAML tags
+        env:
+          YAML_FILE: "${{ vars.COLLECTOR }}.yml"
+          REGISTRY_USER: ${{ secrets.REGISTRY_USER }}
+          REGISTRY_TOKEN: ${{ secrets.REGISTRY_TOKEN }}
+          REDHAT_USER: ${{ secrets.REDHAT_USER }}
+          REDHAT_TOKEN: ${{ secrets.REDHAT_PASS }}
+        run: |
+          # 1. Iterate through all top-level registries in the YAML
+          REGISTRIES=$(yq eval 'keys | .[]' "$YAML_FILE")
+
+          for REGISTRY in $REGISTRIES; do
+            echo "🌐 Processing Registry: $REGISTRY"
+
+            # 2. Login ONLY if it is Iron Bank
+            if [[ "$REGISTRY" == "registry1.dso.mil" ]]; then
+              echo "🔑 Logging into Iron Bank..."
+              skopeo login "$REGISTRY" -u "$REGISTRY_USER" -p "$REGISTRY_TOKEN"
+            elif [[ "$REGISTRY" == "registry.redhat.io" ]]; then
+              echo "🔑 Logging into Red Hat..."
+              skopeo login "$REGISTRY" -u "$REDHAT_USER" -p "$REDHAT_TOKEN"
+            else
+              echo "🔓 Skipping login for $REGISTRY (Public/GHCR)"
+            fi
+
+            # 3. Get images for THIS registry
+            IMAGES=$(yq eval ".[\"$REGISTRY\"].images-by-tag-regex | keys | .[]" "$YAML_FILE")
+
+            for IMAGE in $IMAGES; do
+              echo "  🔍 Checking $REGISTRY/$IMAGE..."
+              
+              # Capture tags and filter for version-like strings (allows leading 'v')
+              RAW_TAGS=$(skopeo list-tags "docker://$REGISTRY/$IMAGE" | jq -r '.Tags[]')
+              LATEST_TAG=$(echo "$RAW_TAGS" | grep -E '^v?[0-9.]+$' | sort -V | tail -n 1)
+
+              if [ -n "$LATEST_TAG" ] && [ "$LATEST_TAG" != "null" ]; then
+                CURRENT_VAL=$(yq eval ".[\"$REGISTRY\"].images-by-tag-regex.\"$IMAGE\"" "$YAML_FILE")
+                
+                # 4. Smart Formatting logic
+                # If the current value starts with ^ or ends with $, preserve the regex anchors
+                if [[ "$CURRENT_VAL" == ^* ]] || [[ "$CURRENT_VAL" == *$ ]]; then
+                  NEW_VALUE="^${LATEST_TAG}$"
+                else
+                  NEW_VALUE="${LATEST_TAG}"
+                fi
+
+                if [ "$CURRENT_VAL" != "$NEW_VALUE" ]; then
+                  echo "  ✅ Updating $IMAGE: $CURRENT_VAL -> $NEW_VALUE"
+                  yq eval ".[\"$REGISTRY\"].images-by-tag-regex.\"$IMAGE\" = \"$NEW_VALUE\"" -i "$YAML_FILE"
+                else
+                  echo "  ✨ $IMAGE is already up to date ($CURRENT_VAL)."
+                fi
+              else
+                echo "  ⚠️ Could not find valid numeric tags for $IMAGE"
+              fi
+            done
+          done
+
+      - name: Create Pull Request to Main
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          if git diff --quiet "${{ vars.COLLECTOR }}.yml"; then
+            echo "No version changes detected. Skipping PR."
+            exit 0
+          fi
+
+          git add "${{ vars.COLLECTOR }}.yml"
+          git commit -m "chore: bump container versions for main release"
+          git push origin develop
+
+          gh pr create \
+            --title "🚀 Release: Version Bump develop -> main (${{ vars.COLLECTOR }})" \
+            --body "Automated version bump from develop to main for ${{ vars.COLLECTOR }}.yml.
+            
+            **Triggered by:** @${{ github.actor }}" \
+            --base main \
+            --head develop
