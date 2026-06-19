@@ -25,7 +25,7 @@ jobs:
       GH_TOKEN: ${{ github.token }}
     steps:
       - name: Check out repository code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           submodules: true
           lfs: true
@@ -102,7 +102,7 @@ jobs:
           sudo apt-get update -y
           sudo apt-get install -y pigz
       - name: Check out repository code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           submodules: true
           lfs: true
@@ -142,7 +142,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           submodules: true
           lfs: true
@@ -201,7 +201,7 @@ jobs:
       pull-requests: write
     steps:
       - name: Check out repository code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           submodules: true
           lfs: true
@@ -555,7 +555,7 @@ jobs:
       pull-requests: read
     steps:
       - name: Check out repository code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Install mkisofs
         run: |
@@ -643,7 +643,7 @@ jobs:
       pull-requests: read
     steps:
       - name: Check out repository code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Download Artifacts
         uses: actions/download-artifact@v8
